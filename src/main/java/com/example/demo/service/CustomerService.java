@@ -3,6 +3,7 @@ package com.example.demo.service;
 import com.example.demo.model.Customer;
 import com.example.demo.repository.CustomerRepository;
 import jakarta.validation.ValidationException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.EnableAsync;
@@ -10,10 +11,12 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.Period;
+import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 
 @Service
 @EnableAsync
+@Slf4j
 public class CustomerService {
     private final CustomerRepository customerRepository;
 
@@ -37,14 +40,32 @@ public class CustomerService {
     public CompletableFuture<Customer> processAsyncValidations(Customer customer) {
 
         // Call the fake services to check weather the ssn, phone and, email is valid
-        CompletableFuture<Boolean> ssnValidationFuture = CompletableFuture.supplyAsync(
-                () -> ssnValidator.validate(customer));
+        CompletableFuture<Boolean> ssnValidationFuture = CompletableFuture.supplyAsync(() -> {
+            try {
+                return ssnValidator.validate(customer);
+            } catch (Exception e) {
+                log.info("SSN validation failed!\n" + Arrays.toString(e.getStackTrace()));
+                throw new ValidationException("SSN validation failed!", e);
+            }
+        });
 
-        CompletableFuture<Boolean> phoneValidationFuture = CompletableFuture.supplyAsync(
-                () -> phoneValidator.validate(customer));
+        CompletableFuture<Boolean> phoneValidationFuture = CompletableFuture.supplyAsync(() -> {
+            try {
+                return phoneValidator.validate(customer);
+            } catch (Exception e) {
+                log.info("Phone validation failed!\n" + Arrays.toString(e.getStackTrace()));
+                throw new ValidationException("Phone validation failed!", e);
+            }
+        });
 
-        CompletableFuture<Boolean> emailValidationFuture = CompletableFuture.supplyAsync(
-                () -> emailValidator.validate(customer));
+        CompletableFuture<Boolean> emailValidationFuture = CompletableFuture.supplyAsync(() -> {
+            try {
+                return emailValidator.validate(customer);
+            } catch (Exception e) {
+                log.info("Email validation failed!\n" + Arrays.toString(e.getStackTrace()));
+                throw new ValidationException("Email validation failed!", e);
+            }
+        });
 
         CompletableFuture<Void> allOf = CompletableFuture.allOf(
                 ssnValidationFuture, phoneValidationFuture, emailValidationFuture);
@@ -55,6 +76,7 @@ public class CustomerService {
             boolean ssnValid = ssnValidationFuture.join();
             boolean phoneValid = phoneValidationFuture.join();
             boolean emailValid = emailValidationFuture.join();
+
             boolean ageValid = validateAge(customer.getBirthday());
 
             if (ssnValid && phoneValid && emailValid && ageValid) {
