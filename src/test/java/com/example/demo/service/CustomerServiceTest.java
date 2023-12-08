@@ -39,7 +39,7 @@ class CustomerServiceTest {
     private CustomerService customerService;
 
     @Test
-    void testProcessAsyncValidations() throws ExecutionException, InterruptedException {
+    void testProcessAsyncValidations() {
         // Mock data
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM/dd/yyyy").withLocale(new Locale("English", "United States"));
         Customer customer = new Customer(1L, "Jacky", "555-55-5555",
@@ -57,7 +57,7 @@ class CustomerServiceTest {
         CompletableFuture<Customer> customerFuture = customerService.processAsyncValidations(customer);
 
         // Wait for the completion of the CompletableFuture and get the result
-        Customer savedCustomer = customerFuture.get();
+        Customer savedCustomer = customerFuture.join();
 
         // Verify that the validation clients were called with the expected arguments
         verify(ssnValidator).validate(eq(customer));
